@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meme Hub</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f0f0f0; margin:0; padding:0; }
+header { background:#ff4081; color:#fff; padding:15px; text-align:center; font-size:24px; }
+.container { max-width:800px; margin:20px auto; padding:10px; background:#fff; border-radius:10px; }
+button { padding:8px 12px; margin:5px; background:#ff4081; color:#fff; border:none; border-radius:5px; cursor:pointer; }
+input, select { padding:8px; margin:5px 0; width:100%; border-radius:5px; border:1px solid #ccc; }
+.video-post { border:1px solid #ccc; margin:10px 0; padding:10px; border-radius:10px; background:#fafafa; }
+.video-post video, .video-post iframe { width:100%; max-height:400px; display:block; margin-bottom:5px; }
+.download { text-decoration:none; color:#ff4081; font-weight:bold; }
+.new-post { margin-bottom:20px; }
+.requestsList div { background:#eee; margin:3px 0; padding:3px 5px; border-radius:5px; }
+</style>
+</head>
+<body>
+
+<header>Meme Hub</header>
+
+<div class="container">
+<div id="loginDiv" class="new-post">
+<h3>Admin Login</h3>
+<input type="password" id="adminPin" placeholder="Enter Admin PIN">
+<button onclick="login()">Login</button>
+</div>
+
+<div id="postDiv" class="new-post" style="display:none;">
+<h3>Add New Meme Video</h3>
+<input type="text" id="videoTitle" placeholder="Video Title">
+<select id="videoSource">
+  <option value="youtube">YouTube URL</option>
+  <option value="tiktok">TikTok URL</option>
+  <option value="facebook">Facebook URL</option>
+  <option value="instagram">Instagram URL</option>
+  <option value="local">Upload Local Video</option>
+</select>
+<input type="text" id="videoUrl" placeholder="Video URL (if not local)">
+<input type="file" id="videoFile" accept="video/mp4,video/webm" style="display:none;">
+<button onclick="addPost()">Add Meme</button>
+</div>
+
+<h3>All Memes</h3>
+<div id="posts"></div>
+</div>
+
+<script>
+let adminLogged = false;
+let posts = JSON.parse(localStorage.getItem('memePosts') || '[]');
+
+document.getElementById('videoSource').addEventListener('change', function(){
+    if(this.value === 'local'){
+        document.getElementById('videoFile').style.display='block';
+        document.getElementById('videoUrl').style.display='none';
+    } else {
+        document.getElementById('videoFile').style.display='none';
+        document.getElementById('videoUrl').style.display='block';
+    }
+});
+
+function login(){
+    const pin = document.getElementById('adminPin').value;
+    if(pin === "1234"){ // আপনার পছন্দমতো PIN
+        adminLogged = true;
+        document.getElementById('loginDiv').style.display = 'none';
+        document.getElementById('postDiv').style.display = 'block';
+        alert("Admin Logged In!");
+    } else {
+        alert("Wrong PIN!");
+    }
+}
+
+function renderPosts(){
+    const container = document.getElementById('posts');
+    container.innerHTML = '';
+    posts.slice().reverse().forEach((p)=>{
+        let div = document.createElement('div');
+        div.className = 'video-post';
+        let content='';
+        if(p.source === 'local'){
+            content = `<video src="${p.url}" controls></video>
+                       <a href="${p.url}" download class="download">Download</a>`;
+        } else {
+            let embedUrl = '';
+            switch(p.source){
+                case 'youtube':
+                    let id = p.url.split('v=')[1]?.split('&')[0];
+                    embedUrl = id ? `https://www.youtube.com/embed/${id}` : p.url;
+                    content = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
+                    break;
+                case 'tiktok':
+                    content = `<iframe src="${p.url}" frameborder="0" allowfullscreen></iframe>`;
+                    break;
+                case 'facebook':
+                    content = `<iframe src="${p.url}" frameborder="0" allowfullscreen></iframe>`;
+                    break;
+                case 'instagram':
+                    content = `<iframe src="${p.url}" frameborder="0" allowfullscreen></iframe>`;
+                    break;
+            }
+        }
+        content += `
+        <h5>What meme do you want to see next?</h5>
+        <input type="text" placeholder="Type your request" class="requestInput">
+        <button onclick="addRequest(this)">Send</button>
+        <div class="requestsList"></div>`;
+        div.innerHTML = `<h4>${p.title}</h4>${content}`;
+        container.appendChild(div);
+    });
+}
+
+function addPost(){
+    if(!adminLogged) return alert("Not authorized");
+    const title = document.getElementById('videoTitle').value;
+    const source = document.getElementById('videoSource').value;
+    if(!title) return alert("Enter video title");
+
+    if(source === 'local'){
+        const fileInput = document.getElementById('videoFile');
+        if(!fileInput.files.length) return alert("Select a video file");
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e){
+            posts.push({title, source, url: e.target.result});
+            localStorage.setItem('memePosts', JSON.stringify(posts));
+            document.getElementById('videoTitle').value='';
+            document.getElementById('videoFile').value='';
+            renderPosts();
+        }
+        reader.readAsDataURL(file);
+    } else {
+        const url = document.getElementById('videoUrl').value;
+        if(!url) return alert("Enter video URL");
+        posts.push({title, source, url});
+        localStorage.setItem('memePosts', JSON.stringify(posts));
+        document.getElementById('videoTitle').value='';
+        document.getElementById('videoUrl').value='';
+        renderPosts();
+    }
+}
+
+function addRequest(button){
+  const input = button.previousElementSibling;
+  const value = input.value.trim();
+  if(!value) return alert("Enter your request");
+  
+  const postDiv = button.parentElement;
+  let requestsList = postDiv.querySelector('.requestsList');
+  
+  const li = document.createElement('div');
+  li.textContent = value;
+  requestsList.appendChild(li);
+  
+  input.value = '';
+}
+
+renderPosts();
+</script>
+
+</body>
+</html>
